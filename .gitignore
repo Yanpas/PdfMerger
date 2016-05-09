@@ -1,0 +1,5 @@
+*.class
+*.pdf
+*.odt
+commons-logging.jar
+pdfbox.jar

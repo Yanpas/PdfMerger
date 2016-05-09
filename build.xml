@@ -5,10 +5,10 @@
 	</description>
 
 	<!-- set global properties for this bin -->
-	<property name='src'   location='src'/>
-	<property name='lib'	 location='lib'/>
-	<property name='bin' location='bin'/>
-	<property name='dist'	 location='dist'/>
+	<property name='src'   location='src/main/java'/>
+	<property name='lib'	 location='src/main/resources'/>
+	<property name='bin' location='target/classes'/>
+	<property name='dist'	 location='target'/>
 	<property name='classpath' location='${lib}/pdfbox.jar'/>
 	<property name='javadoc' location='javadoc'/>
 	<property name='distfile' value='${dist}/pdfmerger.jar'/>
@@ -48,11 +48,11 @@
 	<target name='dist' depends='compile,unit'
 	  description='Generate the distribution' >
 		
-		<jar jarfile='${distfile}' basedir='${bin}' includes='lib/*.jar **/*.class'>
-			<zipgroupfileset dir="lib" includes="*.jar" />
+		<jar jarfile='${distfile}' basedir='${bin}' includes='${lib}/*.jar **/*.class'>
+			<zipgroupfileset dir="${lib}" includes="*.jar" />
 			<!-- <zipgroupfileset dir="/usr/share/java" includes="pdfbox.jar" /> -->
 			<manifest>
-				<attribute name='Main-Class' value='PdfMerger'/>
+				<attribute name='Main-Class' value='yanpas.pdfmerger.PdfMerger'/>
 				<attribute name='Built-By' value='${user.name}'/>
 				<attribute name='Class-Path' value=' ' />
 			</manifest>
@@ -96,4 +96,3 @@
 		</javadoc>
 	</target>
 </project>
-
