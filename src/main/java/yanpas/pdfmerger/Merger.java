@@ -1,10 +1,7 @@
 package yanpas.pdfmerger;
 
 import java.io.File;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.Vector;
+import java.util.*;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -74,19 +71,21 @@ class Merger
 	
 	
 	private List <File> files = new Vector <File>();
+	private Stack <PDDocument> inputstack = new Stack <PDDocument>();
 	private PDDocument outcome; 
 	private PDDocumentOutline outoutl;
 	
 	private void appendDoc(File finput) throws Exception
 	{
-		PDDocument input = null; //
+		
 		try {
-			input = PDDocument.load(finput);
+			inputstack.push (PDDocument.load(finput));
 		} catch (java.io.IOException e)	{
 			System.err.println(e.getMessage());
 			System.exit(1);
 		} finally {	}
 		
+		PDDocument input = inputstack.peek(); //
 		int inpages = input.getNumberOfPages(); //
 		if (inpages == 0)
 			return;
@@ -111,6 +110,7 @@ class Merger
 			outs.addOutline(inoutl.children(), root);
 		}
 		
+		//input.close();		
 	}
 	public Merger(List <File> inlist) throws Exception
 	{

@@ -52,5 +52,6 @@ public class PdfMerger
 			System.err.println(e.getMessage());
 			System.exit(1);
 		} finally {}
+		merged.close();
 	}
 }
