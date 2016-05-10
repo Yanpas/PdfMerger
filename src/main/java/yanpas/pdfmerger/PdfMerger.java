@@ -12,7 +12,7 @@ public class PdfMerger
 	{
 		if (args.length == 0)
 		{
-			System.err.println("Usage:\tpdfmerger file1.pdf file2.pdf ... [out.pdf]");
+			System.err.println("Usage:\tpdfmerger file1.pdf file2.pdf ... out.pdf");
 			System.exit(0);
 		}
 		List <File> infiles = new Vector<File>();
@@ -29,29 +29,26 @@ public class PdfMerger
 				}
 				else 
 				{
-					System.err.println("File "+args[i]+" does not exists");
+					System.err.println( (args[i].charAt(0) == '/' ? "File "+System.getProperty("user.dir")+"/" : "")
+							+args[i]+" does not exists");
 					System.exit(1);
 				}
 			}
 			infiles.add(tmp);
 		}
-		
-		Merger result = new Merger(infiles);
-		PDDocument merged;
-		try {
-			merged = result.merge();
-		} finally {}
 		if (outname == null)
 		{
 			System.err.println("The last argument must be output file name");
 			System.exit(1);
 		}
+		Merger result = new Merger(infiles);
+		PDDocument merged = result.merge();
 		try	{
 			merged.save(outname);
 		} catch (java.io.IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
-		} finally {}
+		}
 		merged.close();
 	}
 }
