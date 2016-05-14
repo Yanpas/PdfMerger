@@ -25,6 +25,7 @@ class Merger
 				this.t = t;
 				this.p = p;
 			}
+			@Override
 			public int compareTo(DirtyWorkaround rhs)
 			{
 				if (n.equals(rhs.n) && t.equals(rhs.t) && p.equals(rhs.p))
@@ -51,6 +52,7 @@ class Merger
 				try	{
 					dest = item.findDestinationPage(fromdoc);
 				} catch(Throwable e) {
+					System.err.println(e.getMessage());
 					System.err.println("Unable to get destination page of item <<" + item.getTitle() +">>");
 					DirtyWorkaround tmp = new DirtyWorkaround(-1, item.getTitle(), dest);
 					dirtymap.add(tmp);
@@ -58,7 +60,7 @@ class Merger
 				}
 				if (dest == null)
 				{
-					System.err.println("Outline item <<"+item.getTitle()+">> doesn't link anywhere");
+					System.err.println("Outline item <<"+item.getTitle()+">> doesn't refer anywhere");
 					dest = outcome.getPage(0);
 					DirtyWorkaround tmp = new DirtyWorkaround(-1, item.getTitle(), dest);
 					dirtymap.add(tmp);
@@ -103,7 +105,7 @@ class Merger
 		
 		PDDocument input = inputstack.peek();
 		int inpages = input.getNumberOfPages();
-		if (inpages == 0)
+		if (inpages < 1)
 			return;
 		int nowpages = outcome.getNumberOfPages();
 		String finname = finput.getName();

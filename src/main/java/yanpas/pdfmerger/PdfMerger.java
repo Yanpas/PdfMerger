@@ -12,8 +12,10 @@ public class PdfMerger
 	{
 		if (args.length == 0)
 		{
-			System.err.println("Usage:\tpdfmerger file1.pdf file2.pdf ... out.pdf");
-			System.exit(0);
+			System.out.println("CLI usage:\tpdfmerger file1.pdf file2.pdf ... out.pdf");
+			SwingMerge gui = new SwingMerge();
+			gui.show();
+			return;
 		}
 		List <File> infiles = new Vector<File>();
 		String outname = null;
