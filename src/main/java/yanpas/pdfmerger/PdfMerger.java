@@ -1,6 +1,7 @@
 package yanpas.pdfmerger;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Vector;
 
@@ -24,7 +25,7 @@ public class PdfMerger
 			File tmp = new File (args[i]);
 			if (!tmp.exists())
 			{
-				if (i == args.length-1 && i>0)
+				if (i == args.length-1 && i > 0)
 				{
 					outname = args[i];
 					break;
@@ -44,10 +45,16 @@ public class PdfMerger
 			System.exit(1);
 		}
 		Merger result = new Merger(infiles);
-		PDDocument merged = result.merge();
+		PDDocument merged = null;
+		try {
+			merged = result.merge();
+		} catch (IOException e){
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
 		try	{
 			merged.save(outname);
-		} catch (java.io.IOException e) {
+		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}

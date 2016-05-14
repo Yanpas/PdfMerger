@@ -1,4 +1,4 @@
-# Pdf Merger
+# PDF Merger
 Welcome to PDF Merger home page!
 
 This program merges several pdfs into one and creates handy outline (tree of bookmarks).

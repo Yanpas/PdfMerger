@@ -48,7 +48,7 @@ class SwingMerge
 		private JButton move_down_button;
 		private JButton merge_button;
 
-	private void placeAllElements()
+	private final void placeAllElements()
 	{
 		Dimension max_buttonsize = new Dimension(150,50);
 		move_up_button = new JButton("Up");
@@ -87,7 +87,7 @@ class SwingMerge
 		frame.add(buttonpanel);
 	}
 
-	private void addEvents()
+	private final void addEvents()
 	{
 		add_button.addActionListener(new ActionListener() {
 			
@@ -161,27 +161,37 @@ class SwingMerge
 		        	
 		        
 				Merger result = new Merger(filelist);
-				PDDocument merged = result.merge();
+				PDDocument merged = null;
+				try {
+					merged = result.merge();
+				} catch (IOException e){
+					JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
+						    JOptionPane.ERROR_MESSAGE);
+					System.err.println(e.getMessage());
+					return;
+				}
 				try {
 					merged.save(new File(fileChooser.getDirectory()+outpath));
-				} catch (Throwable e) {
+				} catch (IOException e) {
 					System.err.println(e.getMessage());
-					JOptionPane.showMessageDialog(frame,
-						    "Can't save to this destination",
-						    "Error",
-						    JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
+							JOptionPane.ERROR_MESSAGE);
+					return;
+				} catch (NullPointerException e) {
+					JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
+							JOptionPane.ERROR_MESSAGE);
+					return;
 				}
 				try	{
 					merged.close();
 				} catch (IOException e)	{
 					e.printStackTrace();
-					JOptionPane.showMessageDialog(frame,
-						    "Can't save to this destination",
-						    "Error",
+					JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
 						    JOptionPane.ERROR_MESSAGE);
 				}
 				JOptionPane.showMessageDialog(frame,
-					    "Done!\nThanks for using PDF Merger. Project's home page:\nhttps://github.com/Yanpas/PdfMerger",
+					    "Done!\nThanks for using PDF Merger. Project's home page:\n" +
+					    "https://github.com/Yanpas/PdfMerger",
 					    "Operation finished",
 					    JOptionPane.INFORMATION_MESSAGE);
 			}
