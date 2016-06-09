@@ -9,7 +9,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Vector;
-import java.util.concurrent.CancellationException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -37,7 +36,7 @@ class SwingMerge
 			return s;
 		}
 	}
-	private class Worker extends SwingWorker<PDDocument, Void>
+	private class Worker extends SwingWorker<Void, Void>
 	{
 		private List<File> filelist;
 		private File output;
@@ -46,7 +45,7 @@ class SwingMerge
 			this.output = output;
 		}
 		@Override
-		public PDDocument doInBackground() throws Exception {
+		public Void doInBackground() throws Exception {
 			Merger result = new Merger(filelist);
 			PDDocument merged = null;
 			try {
@@ -54,50 +53,39 @@ class SwingMerge
 			} catch (IOException e){
 				JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
 					    JOptionPane.ERROR_MESSAGE);
+				progressdialog.setVisible(false);
 				System.err.println(e.getMessage());
 				return null;
 			}
-			return merged;
-		}
-		@Override
-		public void done()
-		{
-			PDDocument merged = null;
-			try {
-				merged = this.get();
-			} catch (CancellationException e) {
-				System.err.println("Cancelled");
-				return;
-			} catch (Exception e) {
-				e.printStackTrace();
-				progressframe.setVisible(false);
-				return;
-			} 
+			progressdialog.setTitle("Saving...");
 			try {
 				merged.save(output);
 			} catch (IOException e) {
 				System.err.println(e.getMessage());
-				JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
-						JOptionPane.ERROR_MESSAGE);
-				return;
+				JOptionPane.showMessageDialog(frame, "Can't save to this destination",
+						"Error", JOptionPane.ERROR_MESSAGE);
+				return null;
 			} catch (NullPointerException e) {
 				JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
 						JOptionPane.ERROR_MESSAGE);
-				return;
+				return null;
+			} finally {
+				progressdialog.setVisible(false);
 			}
 			try	{
 				merged.close();
 			} catch (IOException e)	{
 				e.printStackTrace();
-				JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
-					    JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(frame, "Error while closing output PDF",
+						"Error", JOptionPane.WARNING_MESSAGE);
+				return null;
 			}
-			progressframe.setVisible(false);
 			JOptionPane.showMessageDialog(frame,
 				    "Done!\nThanks for using PDF Merger. Project's home page:\n" +
 				    "https://github.com/Yanpas/PdfMerger",
 				    "Operation finished",
 				    JOptionPane.INFORMATION_MESSAGE);
+			return null;
 		}
 	}
 	private Worker worker;
@@ -114,7 +102,7 @@ class SwingMerge
 		private JButton move_down_button;
 		private JButton merge_button;
 	
-	private JFrame progressframe;
+	private JDialog progressdialog;
 	private JProgressBar progressbar;
 	private JButton cancel_button;
 
@@ -152,7 +140,8 @@ class SwingMerge
 		scrpane.getViewport().setBackground(Color.WHITE);
 		scrpane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(),BoxLayout.X_AXIS));
+		frame.getContentPane().setLayout(new BoxLayout(
+				frame.getContentPane(),BoxLayout.X_AXIS));
 		frame.add(scrpane);
 		frame.add(buttonpanel);
 	}
@@ -163,23 +152,32 @@ class SwingMerge
 			
 			@Override 
 			public void actionPerformed(ActionEvent ae) {
-		    	  FileDialog fileChooser = new FileDialog(frame);
-		    	  fileChooser.setMultipleMode(true);
-		    	  fileChooser.setFilenameFilter(new FilenameFilter()
-					{
-						
-						@Override
-						public boolean accept(File arg0, String arg1)
-						{
-							if(arg1.length()<5) return false;
-							if (arg1.substring(arg1.length()-4, arg1.length()).equals(".pdf")) return true;
+				FileDialog fileChooser = new FileDialog(frame);
+				fileChooser.setMultipleMode(true);
+				fileChooser.setFilenameFilter(new FilenameFilter() {
+
+					@Override
+					public boolean accept(File arg0, String arg1) {
+						if (arg1.length() < 5)
 							return false;
-						}
-					});
-		          fileChooser.setVisible(true);
-		          File[] farray = fileChooser.getFiles();
-		          for (File f : farray)
-		        	  flist_model.addElement(new FString(f));
+						if (arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
+							return true;
+						return false;
+					}
+				});
+				fileChooser.setVisible(true);
+				File[] farray = fileChooser.getFiles();
+				for (File f : farray)
+					if (f.isFile())
+						flist_model.addElement(new FString(f));
+					else
+					{
+						JOptionPane.showMessageDialog(frame,
+								"Selected item:\n"+f.getAbsolutePath()+"\nis not a file",
+							    "Error",
+							    JOptionPane.ERROR_MESSAGE);
+						return;
+					}
 		      }
 		      });
 		remove_button.addActionListener(new ActionListener() {
@@ -191,7 +189,11 @@ class SwingMerge
 				int removed = 0;
 				for (int i : selected)
 					flist_model.remove(i-removed++);
-				if (! flist_model.isEmpty()) flist.setSelectedIndex(0);
+				if (! flist_model.isEmpty()) {
+					int newindex = selected[0];
+					if (newindex > 0) newindex--;
+					flist.setSelectedIndex(newindex);
+				}
 			}
 			
 		});
@@ -230,7 +232,7 @@ class SwingMerge
 		        }
 		        worker = new Worker(filelist, new File(fileChooser.getDirectory()+outpath));
 		        worker.execute();
-		        progressframe.setVisible(true);
+		        progressdialog.setVisible(true);
 			}
 		});
 		move_up_button.addActionListener(new ActionListener()
@@ -239,14 +241,16 @@ class SwingMerge
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				int[] i = flist.getSelectedIndices();
-				if (i.length == 1 && i[0]>0)
+				int[] arr = flist.getSelectedIndices();
+				if (arr[0]>0)
 				{
-					int index = flist.getSelectedIndex();
-					FString selected = flist_model.get(i[0]);
-					flist_model.remove(i[0]);
-					flist_model.add(i[0]-1, selected);
-					flist.setSelectedIndex(index-1);
+					int index = arr[arr.length-1];
+					FString selected = flist_model.get(arr[0]-1);
+					flist_model.remove(arr[0]-1);
+					flist_model.add(index, selected);
+					for(int j=0; j<arr.length; ++j)
+						arr[j]--;
+					flist.setSelectedIndices(arr);
 				}
 				else return;
 			}
@@ -257,14 +261,16 @@ class SwingMerge
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				int[] i = flist.getSelectedIndices();
-				if (i.length == 1 && i[0]<flist_model.getSize()-1)
+				int[] arr = flist.getSelectedIndices();
+				if (arr[arr.length-1]<flist_model.getSize()-1)
 				{
-					int index = flist.getSelectedIndex();
-					FString selected = flist_model.get(i[0]);
-					flist_model.remove(i[0]);
-					flist_model.add(i[0]+1, selected);
-					flist.setSelectedIndex(index+1);
+					int index = arr[0];
+					FString selected = flist_model.get(arr[arr.length-1]+1);
+					flist_model.remove(arr[arr.length-1]+1);
+					flist_model.add(index, selected);
+					for(int j=0; j<arr.length; ++j)
+						arr[j]++;
+					flist.setSelectedIndices(arr);
 				}
 				else return;
 			}
@@ -284,27 +290,23 @@ class SwingMerge
 		frame.pack();
 		frame.setMinimumSize(new Dimension(500, 300));
 		this.addEvents();
-		this.createProgressframe();
+		this.createProgressdialog();
 	}
 
 	@SuppressWarnings("serial")
-	private void createProgressframe() {
-		progressframe = new JFrame("Merging..."){
+	private void createProgressdialog() {
+		progressdialog = new JDialog(frame, "Merging", true){
 			@Override
 			public void setVisible(boolean b)
 			{
 				Point p = frame.getLocation();
-				p.x += frame.getWidth()/2 - progressframe.getWidth()/2;
-				p.y += frame.getHeight()/2 - progressframe.getHeight()/2;
-				progressframe.setLocation(p);
+				p.x += frame.getWidth()/2 - progressdialog.getWidth()/2;
+				p.y += frame.getHeight()/2 - progressdialog.getHeight()/2;
+				progressdialog.setLocation(p);
 				super.setVisible(b);
 			}
 		};
-		progressframe.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-		
-		progressbar = new JProgressBar();
-		progressbar.setIndeterminate(true);
-		progressbar.setMinimumSize(new Dimension(200, 20));
+		progressdialog.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		
 		cancel_button = new JButton("Cancel");
 		cancel_button.addActionListener(new ActionListener() {
@@ -312,14 +314,21 @@ class SwingMerge
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				worker.cancel(true);
-				progressframe.setVisible(false);
+				progressdialog.setVisible(false);
 			}
 		});
-		progressframe.getContentPane().setLayout(new BorderLayout(10,10));
-		progressframe.add(progressbar);
-		progressframe.add(cancel_button,BorderLayout.SOUTH);
-		progressframe.setMinimumSize(new Dimension(200, 50));
-		progressframe.pack();
+		
+		progressbar = new JProgressBar();
+		progressbar.setIndeterminate(true);
+		progressbar.setSize(200, cancel_button.getHeight());
+		
+		progressdialog.getContentPane().setLayout(new BoxLayout(
+				progressdialog.getContentPane(),BoxLayout.X_AXIS));
+		progressdialog.add(progressbar);
+		progressdialog.add(cancel_button,BorderLayout.SOUTH);
+		progressdialog.setMinimumSize(new Dimension(250, 50));
+		progressdialog.setResizable(false);
+		progressdialog.pack();
 	}
 
 	public void show()
