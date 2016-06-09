@@ -9,10 +9,12 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.CancellationException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FileDialog;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -35,6 +37,70 @@ class SwingMerge
 			return s;
 		}
 	}
+	private class Worker extends SwingWorker<PDDocument, Void>
+	{
+		private List<File> filelist;
+		private File output;
+		public Worker(List<File> filelist, File output) {
+			this.filelist = filelist;
+			this.output = output;
+		}
+		@Override
+		public PDDocument doInBackground() throws Exception {
+			Merger result = new Merger(filelist);
+			PDDocument merged = null;
+			try {
+				merged = result.merge();
+			} catch (IOException e){
+				JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
+					    JOptionPane.ERROR_MESSAGE);
+				System.err.println(e.getMessage());
+				return null;
+			}
+			return merged;
+		}
+		@Override
+		public void done()
+		{
+			PDDocument merged = null;
+			try {
+				merged = this.get();
+			} catch (CancellationException e) {
+				System.err.println("Cancelled");
+				return;
+			} catch (Exception e) {
+				e.printStackTrace();
+				progressframe.setVisible(false);
+				return;
+			} 
+			try {
+				merged.save(output);
+			} catch (IOException e) {
+				System.err.println(e.getMessage());
+				JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
+						JOptionPane.ERROR_MESSAGE);
+				return;
+			} catch (NullPointerException e) {
+				JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
+						JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+			try	{
+				merged.close();
+			} catch (IOException e)	{
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
+					    JOptionPane.ERROR_MESSAGE);
+			}
+			progressframe.setVisible(false);
+			JOptionPane.showMessageDialog(frame,
+				    "Done!\nThanks for using PDF Merger. Project's home page:\n" +
+				    "https://github.com/Yanpas/PdfMerger",
+				    "Operation finished",
+				    JOptionPane.INFORMATION_MESSAGE);
+		}
+	}
+	private Worker worker;
 
 	private JFrame frame;
 
@@ -47,6 +113,10 @@ class SwingMerge
 		private JButton remove_button;
 		private JButton move_down_button;
 		private JButton merge_button;
+	
+	private JFrame progressframe;
+	private JProgressBar progressbar;
+	private JButton cancel_button;
 
 	private final void placeAllElements()
 	{
@@ -158,42 +228,9 @@ class SwingMerge
 		        	}
 		        	filelist.add(tmp);
 		        }
-		        	
-		        
-				Merger result = new Merger(filelist);
-				PDDocument merged = null;
-				try {
-					merged = result.merge();
-				} catch (IOException e){
-					JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
-						    JOptionPane.ERROR_MESSAGE);
-					System.err.println(e.getMessage());
-					return;
-				}
-				try {
-					merged.save(new File(fileChooser.getDirectory()+outpath));
-				} catch (IOException e) {
-					System.err.println(e.getMessage());
-					JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
-							JOptionPane.ERROR_MESSAGE);
-					return;
-				} catch (NullPointerException e) {
-					JOptionPane.showMessageDialog(frame, e.getMessage(), "Error",
-							JOptionPane.ERROR_MESSAGE);
-					return;
-				}
-				try	{
-					merged.close();
-				} catch (IOException e)	{
-					e.printStackTrace();
-					JOptionPane.showMessageDialog(frame, "Can't save to this destination", "Error",
-						    JOptionPane.ERROR_MESSAGE);
-				}
-				JOptionPane.showMessageDialog(frame,
-					    "Done!\nThanks for using PDF Merger. Project's home page:\n" +
-					    "https://github.com/Yanpas/PdfMerger",
-					    "Operation finished",
-					    JOptionPane.INFORMATION_MESSAGE);
+		        worker = new Worker(filelist, new File(fileChooser.getDirectory()+outpath));
+		        worker.execute();
+		        progressframe.setVisible(true);
 			}
 		});
 		move_up_button.addActionListener(new ActionListener()
@@ -247,6 +284,42 @@ class SwingMerge
 		frame.pack();
 		frame.setMinimumSize(new Dimension(500, 300));
 		this.addEvents();
+		this.createProgressframe();
+	}
+
+	@SuppressWarnings("serial")
+	private void createProgressframe() {
+		progressframe = new JFrame("Merging..."){
+			@Override
+			public void setVisible(boolean b)
+			{
+				Point p = frame.getLocation();
+				p.x += frame.getWidth()/2 - progressframe.getWidth()/2;
+				p.y += frame.getHeight()/2 - progressframe.getHeight()/2;
+				progressframe.setLocation(p);
+				super.setVisible(b);
+			}
+		};
+		progressframe.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		
+		progressbar = new JProgressBar();
+		progressbar.setIndeterminate(true);
+		progressbar.setMinimumSize(new Dimension(200, 20));
+		
+		cancel_button = new JButton("Cancel");
+		cancel_button.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				worker.cancel(true);
+				progressframe.setVisible(false);
+			}
+		});
+		progressframe.getContentPane().setLayout(new BorderLayout(10,10));
+		progressframe.add(progressbar);
+		progressframe.add(cancel_button,BorderLayout.SOUTH);
+		progressframe.setMinimumSize(new Dimension(200, 50));
+		progressframe.pack();
 	}
 
 	public void show()
