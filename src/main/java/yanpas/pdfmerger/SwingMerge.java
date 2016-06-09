@@ -136,23 +136,23 @@ class SwingMerge
 		buttonpanel.setLayout(new BoxLayout(buttonpanel,BoxLayout.Y_AXIS));
 		buttonpanel.add(add_button);
 		JPanel expander = new JPanel();
-		expander.setMaximumSize(new Dimension(0,Integer.MAX_VALUE));
 		buttonpanel.add(expander);
 		buttonpanel.add(move_up_button);
 		buttonpanel.add(remove_button);
 		buttonpanel.add(move_down_button);
 		JPanel expander2 = new JPanel();
-		expander2.setMaximumSize(new Dimension(0,Integer.MAX_VALUE));
 		buttonpanel.add(expander2);
-		buttonpanel.add(merge_button,BorderLayout.SOUTH);
-		buttonpanel.setMinimumSize(new Dimension(150,Integer.MAX_VALUE));
+		buttonpanel.add(merge_button);
+		buttonpanel.setMaximumSize(new Dimension(200,Integer.MAX_VALUE));
+		buttonpanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 5));
 
 		flist_model = new DefaultListModel<FString>();
 		flist = new JList<FString>(flist_model);
 		scrpane = new JScrollPane(flist);
 		scrpane.getViewport().setBackground(Color.WHITE);
+		scrpane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.X_AXIS));
+		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(),BoxLayout.X_AXIS));
 		frame.add(scrpane);
 		frame.add(buttonpanel);
 	}
