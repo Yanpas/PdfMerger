@@ -2,128 +2,114 @@ package yanpas.pdfmerger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.Stack;
+import java.util.Vector;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageTree;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 
 class Merger
 {
-	private class Outliner
+	private Stack <PDDocument> inDocuments = new Stack<>();
+	private List <File> inFileList = new Vector <>();
+	private int outPagesN = 0;
+	private PDDocument outDocument; 
+	private PDDocumentOutline outOutline;
+	
+	public Merger(List <File> inFileList)
 	{
-		private PDDocument fromdoc;
-		private PDPageTree intree;
-		private int nowpages;
-		public Outliner(PDDocument fromdoc, int nowpages)
+		this.inFileList = inFileList;
+		outDocument = new PDDocument();
+		outOutline = new PDDocumentOutline();
+	}
+	
+	private void addOutlines(Iterable<PDOutlineItem> itemCollection,
+			PDOutlineItem rootItem, PDDocument inDoc)
+	{
+		for (PDOutlineItem item : itemCollection)
 		{
-			this.fromdoc = fromdoc;
-			this.nowpages = nowpages;
-			intree = fromdoc.getPages();
-		}
-		public void addOutline(Iterable<PDOutlineItem> items, PDOutlineItem rootitem)
-		{
-			for (PDOutlineItem item : items)
-			{
-				PDPage dest = new PDPage();
-				try	{
-					dest = item.findDestinationPage(fromdoc);
-				} catch(Throwable e) {
-					System.err.println(e.getMessage());
-					System.err.println("Unable to get destination page of item <<" + item.getTitle() +">>");
-					continue;
-				}
-				if (dest == null)
-				{
-					System.err.println("Outline item <<"+item.getTitle()+">> doesn't refer anywhere");
-					dest = outcome.getPage(0);
-					continue;
-				}
-				
-				int i_dest = intree.indexOf(dest) + this.nowpages;
-				String destname = item.getTitle();
-				PDPage toinsert = outcome.getPages().get(i_dest);
-				
-				PDOutlineItem outtoinsert = new PDOutlineItem();
-				outtoinsert.setDestination(toinsert);
-				outtoinsert.setTitle(destname);
-				rootitem.addLast(outtoinsert);
-				
-				if (item.hasChildren())
-					addOutline(item.children(), outtoinsert);
+			PDPage destPage = null;
+			try	{
+				destPage = item.findDestinationPage(inDoc);
+			} catch(Throwable e) {
+				System.err.println(e.getMessage());
+				System.err.println("Unable to get destination page of item <<" + item.getTitle() +">>");
+				continue;
 			}
+			if (destPage == null)
+			{
+				System.err.println("Outline item <<"+item.getTitle()+">> doesn't refer anywhere");
+				destPage = outDocument.getPage(0);
+				continue;
+			}
+			
+			PDPage itemDestPage = outDocument.getPages().get(
+					inDoc.getPages().indexOf(destPage) + outPagesN);
+			
+			PDOutlineItem outItem = new PDOutlineItem();
+			outItem.setDestination(itemDestPage);
+			outItem.setTitle(item.getTitle());
+			rootItem.addLast(outItem);
+			
+			if (item.hasChildren())
+				addOutlines(item.children(), outItem, inDoc);
 		}
 	}
-	private List <File> files = new Vector <File>();
-	private Stack <PDDocument> inputstack = new Stack <PDDocument>();
-	private PDDocument outcome; 
-	private PDDocumentOutline outoutl;
 	
-	private void appendDoc(final File finput) throws IOException
+	@SuppressWarnings("serial")
+	private void appendDoc(final File inFile) throws IOException
 	{
 		try {
-			inputstack.push (PDDocument.load(finput));
-		} catch (IOException e)	{
-			throw new IOException(){
-				
+			inDocuments.push(PDDocument.load(inFile));
+		} catch (IOException e) {
+			throw new IOException() {
+
 				@Override
-				public String getMessage()
-				{
-					return "File "+finput.getAbsolutePath()+" seems to be non-pdf";
+				public String getMessage() {
+					return "File " + inFile.getAbsolutePath() + " seems to be non-pdf";
 				}
-				static final long serialVersionUID = 123l;
 			};
-		} 
+		}
 		
-		PDDocument input = inputstack.peek();
-		int inpages = input.getNumberOfPages();
-		if (inpages < 1)
+		PDDocument inDoc = inDocuments.peek();
+		int inPagesN = inDoc.getNumberOfPages();
+		if (inPagesN < 1)
 			return;
-		int nowpages = outcome.getNumberOfPages();
-		String finname = finput.getName();
+		String finname = inFile.getName();
 		if (finname.length() > 4)
 			finname = finname.substring(0,finname.length()-4);
-		PDDocumentOutline inoutl = input.getDocumentCatalog().getDocumentOutline();
+		PDDocumentOutline inOutline = inDoc.getDocumentCatalog().getDocumentOutline();
 				
-		for (int i=0; i<inpages; ++i)
-			outcome.addPage(input.getPage(i));
+		for (int i=0; i<inPagesN; ++i)
+			outDocument.addPage(inDoc.getPage(i));
 		
-		PDOutlineItem root = new PDOutlineItem();
-		root.setTitle(finname);
-		root.setDestination(outcome.getPages().get(nowpages));
-		outoutl.addLast(root);
+		PDOutlineItem outRoot = new PDOutlineItem();
+		outRoot.setTitle(finname);
+		outRoot.setDestination(outDocument.getPages().get(outPagesN));
+		outOutline.addLast(outRoot);
 		
-		if (inoutl != null) 
-		{
-			Outliner outs = new Outliner(input, nowpages);
-			outs.addOutline(inoutl.children(), root);
-		}	
-	}
-	public Merger(List <File> inlist)
-	{
-		files = inlist;
-		outcome = new PDDocument();
-		outoutl = new PDDocumentOutline();
-	}
-	public PDDocument merge() throws IOException
-	{
-		for (File doc : files)
-			this.appendDoc(doc);
+		if (inOutline != null) 
+			addOutlines(inOutline.children(), outRoot, inDoc);
 		
-		outcome.getDocumentCatalog().setDocumentOutline(outoutl);
-		return outcome;
+		outPagesN += inPagesN;
 	}
 	
-	@Override
-	protected void finalize() throws Throwable
+	public PDDocument merge() throws IOException
 	{
-		while (! inputstack.empty())
-		{
-			PDDocument tmp = inputstack.pop();
-			tmp.close();
-		}
-		super.finalize();
+		for (File doc : inFileList)
+			this.appendDoc(doc);
+		
+		outDocument.getDocumentCatalog().setDocumentOutline(outOutline);
+		return outDocument;
 	}
+	
+	public void closeAll() throws IOException
+	{
+		while (! inDocuments.empty())
+			inDocuments.pop().close();
+	}
+	
 }

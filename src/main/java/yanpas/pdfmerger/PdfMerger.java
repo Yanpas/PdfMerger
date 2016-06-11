@@ -9,13 +9,13 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 
 public class PdfMerger
 {
-	public static void main(String[] args) throws Exception
+	public static void main(String[] args)
 	{
 		if (args.length == 0)
 		{
 			System.out.println("CLI usage:\tpdfmerger file1.pdf file2.pdf ... out.pdf");
 			SwingMerge gui = new SwingMerge();
-			gui.show();
+			gui.setVisible(true);
 			return;
 		}
 		List <File> infiles = new Vector<File>();
@@ -34,7 +34,7 @@ public class PdfMerger
 				{
 					System.err.println( (args[i].charAt(0) == '/' ? "File "+System.getProperty("user.dir")+"/" : "")
 							+args[i]+" does not exists");
-					System.exit(1);
+					System.exit(2);
 				}
 			}
 			infiles.add(tmp);
@@ -42,22 +42,28 @@ public class PdfMerger
 		if (outname == null)
 		{
 			System.err.println("The last argument must be output file name");
-			System.exit(1);
+			System.exit(2);
 		}
-		Merger result = new Merger(infiles);
-		PDDocument merged = null;
+		Merger merger = new Merger(infiles);
+		PDDocument result = null;
 		try {
-			merged = result.merge();
+			result = merger.merge();
 		} catch (IOException e){
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
 		try	{
-			merged.save(outname);
+			result.save(outname);
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
-		merged.close();
+		try {
+			result.close();
+			merger.closeAll();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
+	
 }
