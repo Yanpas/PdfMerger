@@ -2,9 +2,9 @@ all:
 	ant dist
 	
 install:
-	cp target/pdfmerger.jar /usr/local/lib/
-	cp src/pdfmerger.sh /usr/local/bin/pdfmerger
+	cp target/pdfmerger.jar /opt/
+	cp src/pdfmerger.sh /usr/bin/pdfmerger
 
 uninstall:
-	rm /usr/local/lib/pdfmerger.jar
-	rm /usr/local/bin/pdfmerger
+	rm /opt/pdfmerger.jar
+	rm /usr/bin/pdfmerger

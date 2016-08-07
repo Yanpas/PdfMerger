@@ -1,2 +1,2 @@
 #!/bin/bash
-exec java -jar /usr/local/lib/pdfmerger.jar "$@"
+exec java -jar /opt/pdfmerger.jar "$@"
