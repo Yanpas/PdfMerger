@@ -27,8 +27,13 @@ public class PdfMerger {
 				infiles.add(tmp);
 			}
 
-			try {
-				new Merger().merge(infiles, outname);
+			try (Merger m = new Merger()) {
+				for(File file : infiles) {
+					System.out.println("Processing "+file.getName());
+					m.addDocument(file);
+				}
+				System.out.println("Saving");
+				m.save(outname);
 			} catch (IOException e){
 				System.err.println(e.getLocalizedMessage());
 				e.printStackTrace();

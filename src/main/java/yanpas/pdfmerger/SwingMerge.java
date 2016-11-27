@@ -12,14 +12,17 @@ import java.awt.FileDialog;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 @SuppressWarnings("serial")
 class SwingMerge extends JFrame {
-	private class Worker extends SwingWorker<Void, Void> {
+	private class Worker extends SwingWorker<Void, String> {
+		public static final String MERGING = "Merging", SAVING = "Saving";
 		private List<File> fileList;
 		private String outFile;
-		private String result;
-		private boolean successful;
+		private String result = "Cancelled";
+		private boolean successful = false;
 
 		public Worker(List<File> fileList, String outFile) {
 			this.fileList = fileList;
@@ -28,11 +31,18 @@ class SwingMerge extends JFrame {
 
 		@Override
 		public Void doInBackground() {
-			try {
-				new Merger().merge(fileList, outFile);
+			try (Merger m = new Merger()) {
+				publish(MERGING);
+				double i = 0;
+				for (File fl : fileList) {
+					m.addDocument(fl);
+					i++;
+					setProgress((int)(100*i/(double)fileList.size()));
+				}
+				publish(SAVING);
+				m.save(outFile);
 			} catch (IOException e) {
 				result = e.getLocalizedMessage();
-				successful = false;
 				return null;
 			}
 			successful = true;
@@ -44,12 +54,22 @@ class SwingMerge extends JFrame {
 		@Override
 		public void done() {
 			progressDialog.setVisible(false);
-			JOptionPane.showMessageDialog(SwingMerge.this, result, (successful ? "Operation finished" : "Error"),
+			progressBar.setIndeterminate(false);
+			JOptionPane.showMessageDialog(SwingMerge.this, result,
+					(successful ? "Operation finished" : "Error"),
 					(successful ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE));
 		}
-	}
 
-	private Worker worker;
+		@Override
+		protected void process(final List<String> chunks) {
+			for(final String string : chunks) {
+				progressDialog.setTitle(string);
+				if (string == Worker.SAVING) {
+					progressBar.setIndeterminate(true);
+				}
+			}
+		}
+	}
 
 	private JScrollPane scrpane;
 	private DefaultListModel<File> flistModel;
@@ -60,6 +80,7 @@ class SwingMerge extends JFrame {
 
 	private JDialog progressDialog;
 	private JProgressBar progressBar;
+	private JButton cancelButton;
 
 	public SwingMerge() {
 		try {
@@ -176,8 +197,29 @@ class SwingMerge extends JFrame {
 					}
 					fileList.add(tmp);
 				}
-				worker = new Worker(fileList, (fileChooser.getDirectory() + outpath));
+				final Worker worker = new Worker(fileList, (fileChooser.getDirectory() + outpath));
+				worker.addPropertyChangeListener(new PropertyChangeListener() {
+
+					@Override
+					public void propertyChange(PropertyChangeEvent event) {
+						switch (event.getPropertyName()) {
+						case "progress":
+							progressBar.setIndeterminate(false);
+							progressBar.setValue((Integer) event.getNewValue());
+							break;
+						}
+					}
+				});
+				progressBar.setValue(0);
+				progressDialog.setTitle(Worker.MERGING);
 				worker.execute();
+				cancelButton.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						worker.cancel(true);
+					}
+				});
 				progressDialog.setVisible(true);
 			}
 		});
@@ -217,7 +259,7 @@ class SwingMerge extends JFrame {
 	}
 
 	private void createProgressdialog() {
-		progressDialog = new JDialog(SwingMerge.this, "Merging", true) {
+		progressDialog = new JDialog(SwingMerge.this, Worker.MERGING, true) {
 			@Override
 			public void setVisible(boolean b) {
 				Point p = SwingMerge.this.getLocation();
@@ -230,12 +272,15 @@ class SwingMerge extends JFrame {
 		progressDialog.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
 		progressBar = new JProgressBar();
-		progressBar.setIndeterminate(true);
 		progressBar.setSize(200, 40);
+
+		cancelButton = new JButton("Cancel");
+		cancelButton.setSize(new Dimension(150, 50));
 
 		progressDialog.getContentPane()
 				.setLayout(new BoxLayout(progressDialog.getContentPane(), BoxLayout.X_AXIS));
 		progressDialog.add(progressBar);
+		progressDialog.add(cancelButton);
 		progressDialog.setMinimumSize(new Dimension(250, 50));
 		progressDialog.setResizable(false);
 		progressDialog.pack();

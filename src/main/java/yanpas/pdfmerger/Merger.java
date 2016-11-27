@@ -2,21 +2,22 @@ package yanpas.pdfmerger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Stack;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 
-class Merger {
-	private Stack<PDDocument> inDocuments;
-	private int outPagesN;
-	private PDDocumentOutline outOutline;
+class Merger implements AutoCloseable {
+	private Deque<PDDocument> inDocuments = new ArrayDeque<>();
+	private int outPagesN = 0;
+	private PDDocumentOutline outOutline = new PDDocumentOutline();
+	private PDDocument outDocument = new PDDocument();
 
-	private void addOutlines(Iterable<PDOutlineItem> itemCollection,
-			PDOutlineItem rootItem, PDDocument inDoc, PDDocument outDocument) throws IOException {
+	private void addOutlines(Iterable<PDOutlineItem> itemCollection, PDOutlineItem rootItem,
+			PDDocument inDoc) throws IOException {
 		for (PDOutlineItem item : itemCollection) {
 			PDPage destPage = null;
 			destPage = item.findDestinationPage(inDoc);
@@ -30,15 +31,15 @@ class Merger {
 			rootItem.addLast(outItem);
 
 			if (item.hasChildren())
-				addOutlines(item.children(), outItem, inDoc, outDocument);
+				addOutlines(item.children(), outItem, inDoc);
 		}
 	}
 
-	private void appendDoc(final File inFile, PDDocument outDocument) throws IOException {
+	private void appendDoc(final File inFile) throws IOException {
 		try {
 			inDocuments.push(PDDocument.load(inFile));
 		} catch (IOException e) {
-			throw new IOException("File " + inFile.getAbsolutePath() + " seems to be non-pdf");
+			throw new IOException("File \"" + inFile.getAbsolutePath() + "\" seems to be non-pdf");
 		}
 
 		PDDocument inDoc = inDocuments.peek();
@@ -59,24 +60,28 @@ class Merger {
 		outOutline.addLast(outRoot);
 
 		if (inOutline != null)
-			addOutlines(inOutline.children(), outRoot, inDoc, outDocument);
+			addOutlines(inOutline.children(), outRoot, inDoc);
 
 		outPagesN += inPagesN;
 	}
 
-	public void merge(List<File> inFileList, String outname) throws IOException {
-		outPagesN = 0;
-		outOutline = new PDDocumentOutline();
-		inDocuments = new Stack<>();
-		try (PDDocument outDocument = new PDDocument()) {
-			for (File doc : inFileList)
-				this.appendDoc(doc, outDocument);
+	public void addDocument(File doc) throws IOException {
+		appendDoc(doc);
+	}
 
-			outDocument.getDocumentCatalog().setDocumentOutline(outOutline);
-			outDocument.save(outname);
-		} finally {
-			while (!inDocuments.empty())
+	public void save(String outname) throws IOException {
+		outDocument.getDocumentCatalog().setDocumentOutline(outOutline);
+		outDocument.save(outname);
+	}
+
+	@Override
+	public void close() {
+		try {
+			while (inDocuments.size() != 0)
 				inDocuments.pop().close();
+			outDocument.close();
+		} catch (IOException e) {
+			System.err.println(e.getLocalizedMessage());
 		}
 	}
 }
