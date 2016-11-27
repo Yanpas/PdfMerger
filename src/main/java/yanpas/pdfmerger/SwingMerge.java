@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.List;
-import java.util.Vector;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.Point;
@@ -19,12 +18,12 @@ import java.beans.PropertyChangeListener;
 class SwingMerge extends JFrame {
 	private class Worker extends SwingWorker<Void, String> {
 		public static final String MERGING = "Merging", SAVING = "Saving";
-		private List<File> fileList;
-		private String outFile;
+		private final File[] fileList;
+		private final String outFile;
 		private String result = "Cancelled";
 		private boolean successful = false;
 
-		public Worker(List<File> fileList, String outFile) {
+		public Worker(File[] fileList, String outFile) {
 			this.fileList = fileList;
 			this.outFile = outFile;
 		}
@@ -37,7 +36,7 @@ class SwingMerge extends JFrame {
 				for (File fl : fileList) {
 					m.addDocument(fl);
 					i++;
-					setProgress((int)(100*i/(double)fileList.size()));
+					setProgress((int)(100*i/(double)fileList.length));
 				}
 				publish(SAVING);
 				m.save(outFile);
@@ -75,8 +74,7 @@ class SwingMerge extends JFrame {
 	private DefaultListModel<File> flistModel;
 	private JList<File> fstringList;
 	private JPanel buttonPanel;
-	private JButton moveUpButton, addButton, removeButton, moveDownButton;
-	private JButton mergeButton;
+	private JButton moveUpButton, addButton, removeButton, moveDownButton, mergeButton;
 
 	private JDialog progressDialog;
 	private JProgressBar progressBar;
@@ -95,6 +93,8 @@ class SwingMerge extends JFrame {
 		setMinimumSize(new Dimension(500, 300));
 		this.addEvents();
 		this.createProgressdialog();
+		/*for(String str : new String[]{"", "", ""})
+			flistModel.addElement(new File(str));*/
 	}
 
 	private final void placeAllElements() {
@@ -186,18 +186,17 @@ class SwingMerge extends JFrame {
 				String outpath = fileChooser.getFile();
 				if (outpath == null)
 					return;
-				List<File> fileList = new Vector<File>();
-				for (int i = 0; i < flistModel.getSize(); ++i) {
-					File tmp = flistModel.get(i);
-					if (!tmp.exists()) {
-						JOptionPane.showMessageDialog(SwingMerge.this,
-								"File \"" + tmp.getAbsolutePath() + "\" does not exist", "Error",
-								JOptionPane.ERROR_MESSAGE);
-						return;
+				File[] farr = new File[flistModel.getSize()];
+				for(int i=0; i<farr.length; ++i)
+					farr[i]=flistModel.get(i);
+				final Worker worker = new Worker(farr, (fileChooser.getDirectory() + outpath));
+				ActionListener cancelListner = new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						worker.cancel(true);
 					}
-					fileList.add(tmp);
-				}
-				final Worker worker = new Worker(fileList, (fileChooser.getDirectory() + outpath));
+				};
 				worker.addPropertyChangeListener(new PropertyChangeListener() {
 
 					@Override
@@ -212,15 +211,10 @@ class SwingMerge extends JFrame {
 				});
 				progressBar.setValue(0);
 				progressDialog.setTitle(Worker.MERGING);
+				cancelButton.addActionListener(cancelListner);
 				worker.execute();
-				cancelButton.addActionListener(new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						worker.cancel(true);
-					}
-				});
 				progressDialog.setVisible(true);
+				cancelButton.removeActionListener(cancelListner);
 			}
 		});
 		moveUpButton.addActionListener(new ActionListener() {
