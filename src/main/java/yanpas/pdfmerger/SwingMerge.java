@@ -18,6 +18,8 @@ class SwingMerge extends JFrame {
 	private class Worker extends SwingWorker<Void, Void> {
 		private List<File> fileList;
 		private String outFile;
+		private String result;
+		private boolean successful;
 
 		public Worker(List<File> fileList, String outFile) {
 			this.fileList = fileList;
@@ -26,25 +28,24 @@ class SwingMerge extends JFrame {
 
 		@Override
 		public Void doInBackground() {
-			progressDialog.setTitle("Merging");
-			Merger merger = new Merger(fileList);
-			progressDialog.setVisible(true);
 			try {
-				merger.merge(outFile);
+				new Merger().merge(fileList, outFile);
 			} catch (IOException e) {
-				JOptionPane.showMessageDialog(SwingMerge.this, e.getMessage(), "Error",
-						JOptionPane.ERROR_MESSAGE);
-				progressDialog.setVisible(false);
-				System.err.println(e.getMessage());
+				result = e.getLocalizedMessage();
+				successful = false;
 				return null;
-			} finally {
-				progressDialog.setVisible(false);
 			}
-			JOptionPane.showMessageDialog(SwingMerge.this,
-					"Done!\nThanks for using PDF Merger. Project's home page:\n"
-							+ "https://github.com/Yanpas/PdfMerger",
-					"Operation finished", JOptionPane.INFORMATION_MESSAGE);
+			successful = true;
+			result = "Done!\nThanks for using PDF Merger. Project's home page:\n"
+					+ "https://github.com/Yanpas/PdfMerger";
 			return null;
+		}
+
+		@Override
+		public void done() {
+			progressDialog.setVisible(false);
+			JOptionPane.showMessageDialog(SwingMerge.this, result, (successful ? "Operation finished" : "Error"),
+					(successful ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE));
 		}
 	}
 
@@ -54,10 +55,7 @@ class SwingMerge extends JFrame {
 	private DefaultListModel<File> flistModel;
 	private JList<File> fstringList;
 	private JPanel buttonPanel;
-	private JButton moveUpButton;
-	private JButton addButton;
-	private JButton removeButton;
-	private JButton moveDownButton;
+	private JButton moveUpButton, addButton, removeButton, moveDownButton;
 	private JButton mergeButton;
 
 	private JDialog progressDialog;
@@ -79,29 +77,20 @@ class SwingMerge extends JFrame {
 	}
 
 	private final void placeAllElements() {
-		Dimension max_buttonsize = new Dimension(150, 50);
 		moveUpButton = new JButton("Up");
-		moveUpButton.setMaximumSize(max_buttonsize);
 		addButton = new JButton("Add");
-		addButton.setMaximumSize(max_buttonsize);
 		removeButton = new JButton("Remove");
-		removeButton.setMaximumSize(max_buttonsize);
 		moveDownButton = new JButton("Down");
-		moveDownButton.setMaximumSize(max_buttonsize);
 		mergeButton = new JButton("Merge");
-		mergeButton.setMaximumSize(max_buttonsize);
-
+		for(JButton btn : new JButton[]{moveUpButton, addButton, removeButton, moveDownButton, mergeButton}) {
+			btn.setMaximumSize(new Dimension(150, 50));
+		}
 		buttonPanel = new JPanel();
 		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-		buttonPanel.add(addButton);
-		JPanel expander = new JPanel();
-		buttonPanel.add(expander);
-		buttonPanel.add(moveUpButton);
-		buttonPanel.add(removeButton);
-		buttonPanel.add(moveDownButton);
-		JPanel expander2 = new JPanel();
-		buttonPanel.add(expander2);
-		buttonPanel.add(mergeButton);
+
+		for(JComponent comp : new JComponent[]{addButton, new JPanel(), moveUpButton, removeButton,
+				moveDownButton, new JPanel(), mergeButton})
+			buttonPanel.add(comp);
 		buttonPanel.setMaximumSize(new Dimension(200, Integer.MAX_VALUE));
 		buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 5));
 
@@ -126,9 +115,7 @@ class SwingMerge extends JFrame {
 
 					@Override
 					public boolean accept(File arg0, String arg1) {
-						if (arg1.length() < 5)
-							return false;
-						if (arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
+						if (arg1.length() >= 5 && arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
 							return true;
 						return false;
 					}
@@ -207,8 +194,7 @@ class SwingMerge extends JFrame {
 					for (int j = 0; j < arr.length; ++j)
 						arr[j]--;
 					fstringList.setSelectedIndices(arr);
-				} else
-					return;
+				}
 			}
 		});
 		moveDownButton.addActionListener(new ActionListener() {

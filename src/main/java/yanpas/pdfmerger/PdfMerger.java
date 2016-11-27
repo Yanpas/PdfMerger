@@ -27,9 +27,8 @@ public class PdfMerger {
 				infiles.add(tmp);
 			}
 
-			Merger merger = new Merger(infiles);
 			try {
-				merger.merge(outname);
+				new Merger().merge(infiles, outname);
 			} catch (IOException e){
 				System.err.println(e.getLocalizedMessage());
 				e.printStackTrace();
