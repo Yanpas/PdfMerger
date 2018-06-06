@@ -81,11 +81,12 @@ class SwingMerge extends JFrame {
 	private JButton cancelButton;
 
 	public SwingMerge() {
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Throwable e) {
-			e.printStackTrace();
-		}
+		if (System.getProperty("os.name").equals("Linux"))
+			try {
+				UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+			} catch (Exception e) {
+				System.err.println("Failed to set GTK LAF: " + e.getMessage());
+			}
 		setTitle("PDF Merger");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.placeAllElements();
