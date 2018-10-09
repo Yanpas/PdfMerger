@@ -16,10 +16,13 @@ will be merged into merged.pdf with the following outline:
   * Header 2
     * subheader 2 
 
-Building: `mvn compile assembly:single`
-Usage: `java -jar pdfmerger.jar file1.pdf file2.pdf ... out.pdf`
-If you want to use it your linux system there is sh wrapper at src/pdfmerger
+Building: `mvn compile assembly:single`.
 
+Usage: `pdfmerger file1.pdf file2.pdf ... out.pdf`.
+
+Help available using `-h` or `--help`.
+
+If you want to use it your linux system there is sh wrapper at src/pdfmerger.
 Running without arguments launches Swing GUI:
 
 ![GUI](http://i.imgur.com/dMoCWSf.png)
