@@ -1,7 +1,7 @@
 # PDF Merger
 Welcome to PDF Merger home page!
 
-This [program](target/pdfmerger.jar?raw=true) merges several pdfs into one and creates handy outline (tree of bookmarks).
+This program merges several pdfs into one and creates handy outline (tree of bookmarks).
 For example: doc1.pdf with outline:
 * Header 1
 
@@ -16,10 +16,11 @@ will be merged into merged.pdf with the following outline:
   * Header 2
     * subheader 2 
 
-Usage:	`java -jar pdfmerger.jar file1.pdf file2.pdf ... out.pdf`
+Building: `mvn compile assembly:single`
+Usage: `java -jar pdfmerger.jar file1.pdf file2.pdf ... out.pdf`
+If you want to use it your linux system there is sh wrapper at src/pdfmerger
 
 Running without arguments launches Swing GUI:
 
 ![GUI](http://i.imgur.com/dMoCWSf.png)
 
-You may also create and install program via `sudo make install` and uninstall via `sudo make uninstall`. For Debian-based distro use `sudo checkinstall -D` for installing the package. Run anywhere right out of console: `pdfmerger [arguments ...]`.

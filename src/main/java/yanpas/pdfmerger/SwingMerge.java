@@ -127,29 +127,25 @@ class SwingMerge extends JFrame {
 	}
 
 	private final void addEvents() {
-		addButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent ae) {
-				FileDialog fileChooser = new FileDialog(SwingMerge.this);
-				fileChooser.setMultipleMode(true);
-				fileChooser.setFilenameFilter((File arg0, String arg1) -> {
-					if (arg1.length() >= 5 && arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
-						return true;
-					return false;
-				});
-				fileChooser.setVisible(true);
-				File[] farray = fileChooser.getFiles();
-				for (File f : farray)
-					if (f.isFile())
-						flistModel.addElement(f);
-					else {
-						JOptionPane.showMessageDialog(SwingMerge.this,
-								"Selected item:\n" + f.getAbsolutePath() + "\nis not a file", "Error",
-								JOptionPane.ERROR_MESSAGE);
-						return;
-					}
-			}
+		addButton.addActionListener((ActionEvent ae) -> {
+			FileDialog fileChooser = new FileDialog(SwingMerge.this);
+			fileChooser.setMultipleMode(true);
+			fileChooser.setFilenameFilter((File arg0, String arg1) -> {
+				if (arg1.length() >= 5 && arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
+					return true;
+				return false;
+			});
+			fileChooser.setVisible(true);
+			File[] farray = fileChooser.getFiles();
+			for (File f : farray)
+				if (f.isFile())
+					flistModel.addElement(f);
+				else {
+					JOptionPane.showMessageDialog(SwingMerge.this,
+							"Selected item:\n" + f.getAbsolutePath() + "\nis not a file", "Error",
+							JOptionPane.ERROR_MESSAGE);
+					return;
+				}
 		});
 		removeButton.addActionListener((ActionEvent ae) -> {
 			int[] selected = fstringList.getSelectedIndices();
@@ -180,16 +176,12 @@ class SwingMerge extends JFrame {
 				farr[i] = flistModel.get(i);
 			final Worker worker = new Worker(farr, (fileChooser.getDirectory() + outpath));
 			ActionListener cancelListner = (ActionEvent e) -> worker.cancel(true);
-			worker.addPropertyChangeListener(new PropertyChangeListener() {
-
-				@Override
-				public void propertyChange(PropertyChangeEvent event) {
-					switch (event.getPropertyName()) {
-					case "progress":
-						progressBar.setIndeterminate(false);
-						progressBar.setValue((Integer) event.getNewValue());
-						break;
-					}
+			worker.addPropertyChangeListener((PropertyChangeEvent event) -> {
+				switch (event.getPropertyName()) {
+				case "progress":
+					progressBar.setIndeterminate(false);
+					progressBar.setValue((Integer) event.getNewValue());
+					break;
 				}
 			});
 			progressBar.setValue(0);

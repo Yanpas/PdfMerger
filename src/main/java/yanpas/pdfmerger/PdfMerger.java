@@ -8,38 +8,72 @@ import java.util.List;
 public class PdfMerger {
 	public static void main(String[] args) {
 		if (args.length == 0) {
-			System.out.println("CLI usage:\tpdfmerger file1.pdf file2.pdf ... out.pdf");
 			SwingMerge gui = new SwingMerge();
 			gui.setVisible(true);
-		} else {
-			List<File> infiles = new ArrayList<>();
-			String outname = args[args.length - 1];
-			if (new File(outname).exists()) {
-				System.err.println("The last argument must be output file name");
-				System.exit(1);
-			}
-			for (int i = 0; i < args.length - 1; i++) {
-				File tmp = new File(args[i]);
-				if (!tmp.exists()) {
-					System.err.println("File " + args[i] + " does not exist");
+			return;
+		}
+
+		List<File> infiles = new ArrayList<>();
+		boolean progress = false;
+		String outname = null;
+		int i = 0;
+
+		for (String arg : args) {
+			switch (arg) {
+			case "-v":
+			case "--version":
+				System.out.println(PdfMerger.class.getPackage().getImplementationVersion());
+				return;
+			case "-h":
+			case "--help":
+				System.out.println("Usage: pdfmerger file1.pdf file2.pdf ... out.pdf");
+				System.out.println("Run pdfmerger without arguments to launch GUI");
+				System.out.println("  -h | --help  Print this message and exit");
+				System.out.println("  -v | --version  Print version and exit");
+				System.out.println("  --progress  Log progress to stdout");
+				return;
+			case "--progress":
+				progress = true;
+				break;
+			default:
+				File targetFile = new File(arg);
+				if (i == args.length - 1) {
+					if (targetFile.exists()) {
+						System.err.println("The last argument must be output file name");
+						System.exit(1);
+					}
+					outname = arg;
+					break;
+				}
+				if (!targetFile.exists()) {
+					System.err.println("File " + arg + " does not exist");
 					System.exit(1);
 				}
-				infiles.add(tmp);
+				infiles.add(targetFile);
+				break;
 			}
+			i++;
+		}
 
-			try (Merger m = new Merger()) {
-				for (File file : infiles) {
+		if (infiles.isEmpty()) {
+			System.err.println("No input files supplied (last file should be output file)");
+			System.exit(1);
+		}
+
+		try (Merger m = new Merger()) {
+			for (File file : infiles) {
+				if (progress)
 					System.out.println("Processing " + file.getName());
-					m.addDocument(file);
-				}
-				System.out.println("Saving");
-				m.save(outname);
-			} catch (IOException e) {
-				System.err.println(e.getLocalizedMessage());
-				System.err.println("Stack trace:");
-				e.printStackTrace();
-				System.exit(1);
+				m.addDocument(file);
 			}
+			if (progress)
+				System.out.println("Saving");
+			m.save(outname);
+		} catch (IOException e) {
+			System.err.println("Error: " + e.getLocalizedMessage());
+			System.err.println("Stack trace:");
+			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 }
