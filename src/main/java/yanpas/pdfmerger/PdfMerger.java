@@ -28,14 +28,15 @@ public class PdfMerger {
 			}
 
 			try (Merger m = new Merger()) {
-				for(File file : infiles) {
-					System.out.println("Processing "+file.getName());
+				for (File file : infiles) {
+					System.out.println("Processing " + file.getName());
 					m.addDocument(file);
 				}
 				System.out.println("Saving");
 				m.save(outname);
-			} catch (IOException e){
+			} catch (IOException e) {
 				System.err.println(e.getLocalizedMessage());
+				System.err.println("Stack trace:");
 				e.printStackTrace();
 				System.exit(1);
 			}

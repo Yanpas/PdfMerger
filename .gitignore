@@ -1,4 +1,5 @@
-*.class
-*.pdf
-*.odt
-pom.properties
+.settings
+.project
+.classpath
+.vscode
+target

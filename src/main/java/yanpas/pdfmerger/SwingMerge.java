@@ -36,7 +36,7 @@ class SwingMerge extends JFrame {
 				for (File fl : fileList) {
 					m.addDocument(fl);
 					i++;
-					setProgress((int)(100*i/(double)fileList.length));
+					setProgress((int) (100 * i / (double) fileList.length));
 				}
 				publish(SAVING);
 				m.save(outFile);
@@ -54,14 +54,13 @@ class SwingMerge extends JFrame {
 		public void done() {
 			progressDialog.setVisible(false);
 			progressBar.setIndeterminate(false);
-			JOptionPane.showMessageDialog(SwingMerge.this, result,
-					(successful ? "Operation finished" : "Error"),
+			JOptionPane.showMessageDialog(SwingMerge.this, result, (successful ? "Operation finished" : "Error"),
 					(successful ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE));
 		}
 
 		@Override
 		protected void process(final List<String> chunks) {
-			for(final String string : chunks) {
+			for (final String string : chunks) {
 				progressDialog.setTitle(string);
 				if (string == Worker.SAVING) {
 					progressBar.setIndeterminate(true);
@@ -81,12 +80,15 @@ class SwingMerge extends JFrame {
 	private JButton cancelButton;
 
 	public SwingMerge() {
-		if (System.getProperty("os.name").equals("Linux"))
-			try {
+		try {
+			if (System.getProperty("os.name").equals("Linux")) {
 				UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
-			} catch (Exception e) {
-				System.err.println("Failed to set GTK LAF: " + e.getMessage());
+			} else {
+				UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			}
+		} catch (Exception e) {
+			System.err.println("Failed to set LAF: " + e.getMessage());
+		}
 		setTitle("PDF Merger");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.placeAllElements();
@@ -94,8 +96,6 @@ class SwingMerge extends JFrame {
 		setMinimumSize(new Dimension(500, 300));
 		this.addEvents();
 		this.createProgressdialog();
-		/*for(String str : new String[]{"", "", ""})
-			flistModel.addElement(new File(str));*/
 	}
 
 	private final void placeAllElements() {
@@ -104,14 +104,14 @@ class SwingMerge extends JFrame {
 		removeButton = new JButton("Remove");
 		moveDownButton = new JButton("Down");
 		mergeButton = new JButton("Merge");
-		for(JButton btn : new JButton[]{moveUpButton, addButton, removeButton, moveDownButton, mergeButton}) {
+		for (JButton btn : new JButton[] { moveUpButton, addButton, removeButton, moveDownButton, mergeButton }) {
 			btn.setMaximumSize(new Dimension(150, 50));
 		}
 		buttonPanel = new JPanel();
 		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
 
-		for(JComponent comp : new JComponent[]{addButton, new JPanel(), moveUpButton, removeButton,
-				moveDownButton, new JPanel(), mergeButton})
+		for (JComponent comp : new JComponent[] { addButton, new JPanel(), moveUpButton, removeButton, moveDownButton,
+				new JPanel(), mergeButton })
 			buttonPanel.add(comp);
 		buttonPanel.setMaximumSize(new Dimension(200, Integer.MAX_VALUE));
 		buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 5));
@@ -133,14 +133,10 @@ class SwingMerge extends JFrame {
 			public void actionPerformed(ActionEvent ae) {
 				FileDialog fileChooser = new FileDialog(SwingMerge.this);
 				fileChooser.setMultipleMode(true);
-				fileChooser.setFilenameFilter(new FilenameFilter() {
-
-					@Override
-					public boolean accept(File arg0, String arg1) {
-						if (arg1.length() >= 5 && arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
-							return true;
-						return false;
-					}
+				fileChooser.setFilenameFilter((File arg0, String arg1) -> {
+					if (arg1.length() >= 5 && arg1.substring(arg1.length() - 4, arg1.length()).equals(".pdf"))
+						return true;
+					return false;
 				});
 				fileChooser.setVisible(true);
 				File[] farray = fileChooser.getFiles();
@@ -149,107 +145,84 @@ class SwingMerge extends JFrame {
 						flistModel.addElement(f);
 					else {
 						JOptionPane.showMessageDialog(SwingMerge.this,
-								"Selected item:\n" + f.getAbsolutePath() + "\nis not a file",
-								"Error", JOptionPane.ERROR_MESSAGE);
+								"Selected item:\n" + f.getAbsolutePath() + "\nis not a file", "Error",
+								JOptionPane.ERROR_MESSAGE);
 						return;
 					}
 			}
 		});
-		removeButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent ae) {
-				int[] selected = fstringList.getSelectedIndices();
-				int removed = 0;
-				for (int i : selected)
-					flistModel.remove(i - removed++);
-				if (!flistModel.isEmpty()) {
-					int newindex = selected[0];
-					if (newindex > 0)
-						newindex--;
-					fstringList.setSelectedIndex(newindex);
-				}
+		removeButton.addActionListener((ActionEvent ae) -> {
+			int[] selected = fstringList.getSelectedIndices();
+			int removed = 0;
+			for (int i : selected)
+				flistModel.remove(i - removed++);
+			if (!flistModel.isEmpty()) {
+				int newindex = selected[0];
+				if (newindex > 0)
+					newindex--;
+				fstringList.setSelectedIndex(newindex);
 			}
-
 		});
-		mergeButton.addActionListener(new ActionListener() {
+		mergeButton.addActionListener((ActionEvent arg0) -> {
+			if (flistModel.isEmpty()) {
+				JOptionPane.showMessageDialog(SwingMerge.this, "No PDF files in list", "Error",
+						JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+			FileDialog fileChooser = new FileDialog(SwingMerge.this);
+			fileChooser.setMode(FileDialog.SAVE);
+			fileChooser.setVisible(true);
+			String outpath = fileChooser.getFile();
+			if (outpath == null)
+				return;
+			File[] farr = new File[flistModel.getSize()];
+			for (int i = 0; i < farr.length; ++i)
+				farr[i] = flistModel.get(i);
+			final Worker worker = new Worker(farr, (fileChooser.getDirectory() + outpath));
+			ActionListener cancelListner = (ActionEvent e) -> worker.cancel(true);
+			worker.addPropertyChangeListener(new PropertyChangeListener() {
 
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				if (flistModel.isEmpty()) {
-					JOptionPane.showMessageDialog(SwingMerge.this, "No PDF files in list", "Error",
-							JOptionPane.ERROR_MESSAGE);
-					return;
-				}
-				FileDialog fileChooser = new FileDialog(SwingMerge.this);
-				fileChooser.setMode(FileDialog.SAVE);
-				fileChooser.setVisible(true);
-				String outpath = fileChooser.getFile();
-				if (outpath == null)
-					return;
-				File[] farr = new File[flistModel.getSize()];
-				for(int i=0; i<farr.length; ++i)
-					farr[i]=flistModel.get(i);
-				final Worker worker = new Worker(farr, (fileChooser.getDirectory() + outpath));
-				ActionListener cancelListner = new ActionListener() {
-
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						worker.cancel(true);
+				@Override
+				public void propertyChange(PropertyChangeEvent event) {
+					switch (event.getPropertyName()) {
+					case "progress":
+						progressBar.setIndeterminate(false);
+						progressBar.setValue((Integer) event.getNewValue());
+						break;
 					}
-				};
-				worker.addPropertyChangeListener(new PropertyChangeListener() {
-
-					@Override
-					public void propertyChange(PropertyChangeEvent event) {
-						switch (event.getPropertyName()) {
-						case "progress":
-							progressBar.setIndeterminate(false);
-							progressBar.setValue((Integer) event.getNewValue());
-							break;
-						}
-					}
-				});
-				progressBar.setValue(0);
-				progressDialog.setTitle(Worker.MERGING);
-				cancelButton.addActionListener(cancelListner);
-				worker.execute();
-				progressDialog.setVisible(true);
-				cancelButton.removeActionListener(cancelListner);
-			}
-		});
-		moveUpButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int[] arr = fstringList.getSelectedIndices();
-				if (arr[0] > 0) {
-					int index = arr[arr.length - 1];
-					File selected = flistModel.get(arr[0] - 1);
-					flistModel.remove(arr[0] - 1);
-					flistModel.add(index, selected);
-					for (int j = 0; j < arr.length; ++j)
-						arr[j]--;
-					fstringList.setSelectedIndices(arr);
 				}
+			});
+			progressBar.setValue(0);
+			progressDialog.setTitle(Worker.MERGING);
+			cancelButton.addActionListener(cancelListner);
+			worker.execute();
+			progressDialog.setVisible(true);
+			cancelButton.removeActionListener(cancelListner);
+		});
+		moveUpButton.addActionListener((ActionEvent e) -> {
+			int[] arr = fstringList.getSelectedIndices();
+			if (arr[0] > 0) {
+				int index = arr[arr.length - 1];
+				File selected = flistModel.get(arr[0] - 1);
+				flistModel.remove(arr[0] - 1);
+				flistModel.add(index, selected);
+				for (int j = 0; j < arr.length; ++j)
+					arr[j]--;
+				fstringList.setSelectedIndices(arr);
 			}
 		});
-		moveDownButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int[] arr = fstringList.getSelectedIndices();
-				if (arr[arr.length - 1] < flistModel.getSize() - 1) {
-					int index = arr[0];
-					File selected = flistModel.get(arr[arr.length - 1] + 1);
-					flistModel.remove(arr[arr.length - 1] + 1);
-					flistModel.add(index, selected);
-					for (int j = 0; j < arr.length; ++j)
-						arr[j]++;
-					fstringList.setSelectedIndices(arr);
-				} else
-					return;
-			}
+		moveDownButton.addActionListener((ActionEvent e) -> {
+			int[] arr = fstringList.getSelectedIndices();
+			if (arr[arr.length - 1] < flistModel.getSize() - 1) {
+				int index = arr[0];
+				File selected = flistModel.get(arr[arr.length - 1] + 1);
+				flistModel.remove(arr[arr.length - 1] + 1);
+				flistModel.add(index, selected);
+				for (int j = 0; j < arr.length; ++j)
+					arr[j]++;
+				fstringList.setSelectedIndices(arr);
+			} else
+				return;
 		});
 	}
 
@@ -272,8 +245,7 @@ class SwingMerge extends JFrame {
 		cancelButton = new JButton("Cancel");
 		cancelButton.setSize(new Dimension(150, 50));
 
-		progressDialog.getContentPane()
-				.setLayout(new BoxLayout(progressDialog.getContentPane(), BoxLayout.X_AXIS));
+		progressDialog.getContentPane().setLayout(new BoxLayout(progressDialog.getContentPane(), BoxLayout.X_AXIS));
 		progressDialog.add(progressBar);
 		progressDialog.add(cancelButton);
 		progressDialog.setMinimumSize(new Dimension(250, 50));

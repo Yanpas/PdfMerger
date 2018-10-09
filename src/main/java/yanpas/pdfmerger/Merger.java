@@ -16,15 +16,14 @@ class Merger implements AutoCloseable {
 	private PDDocumentOutline outOutline = new PDDocumentOutline();
 	private PDDocument outDocument = new PDDocument();
 
-	private void addOutlines(Iterable<PDOutlineItem> itemCollection, PDOutlineItem rootItem,
-			PDDocument inDoc) throws IOException {
+	private void addOutlines(Iterable<PDOutlineItem> itemCollection, PDOutlineItem rootItem, PDDocument inDoc)
+			throws IOException {
 		for (PDOutlineItem item : itemCollection) {
 			PDPage destPage = null;
 			destPage = item.findDestinationPage(inDoc);
 			PDOutlineItem outItem = new PDOutlineItem();
 			if (destPage != null) {
-				PDPage itemDestPage =
-						outDocument.getPages().get(inDoc.getPages().indexOf(destPage) + outPagesN);
+				PDPage itemDestPage = outDocument.getPages().get(inDoc.getPages().indexOf(destPage) + outPagesN);
 				outItem.setDestination(itemDestPage);
 			}
 			outItem.setTitle(item.getTitle());
@@ -39,7 +38,7 @@ class Merger implements AutoCloseable {
 		try {
 			inDocuments.push(PDDocument.load(inFile));
 		} catch (IOException e) {
-			throw new IOException("File \"" + inFile.getAbsolutePath() + "\" seems to be non-pdf");
+			throw new IOException("File \"" + inFile.getAbsolutePath() + "\" seems to be non-pdf", e);
 		}
 
 		PDDocument inDoc = inDocuments.peek();
@@ -48,10 +47,10 @@ class Merger implements AutoCloseable {
 			return;
 		String finname = inFile.getName();
 		if (finname.length() > 4)
-			finname = finname.substring(0,finname.length()-4);
+			finname = finname.substring(0, finname.length() - 4);
 		PDDocumentOutline inOutline = inDoc.getDocumentCatalog().getDocumentOutline();
 
-		for (int i=0; i<inPagesN; ++i)
+		for (int i = 0; i < inPagesN; ++i)
 			outDocument.addPage(inDoc.getPage(i));
 
 		PDOutlineItem outRoot = new PDOutlineItem();
