@@ -7,16 +7,16 @@ For example: doc1.pdf with outline:
 
 and doc2.pdf with
 * Header 2
- * subheader 2
+  * subheader 2
 
-will be merged into merged.pdf with the following outline:
+will be merged into one document with the following outline:
 * doc1
   * Header 1
 * doc2 
   * Header 2
     * subheader 2 
 
-Building: `mvn compile assembly:single`.
+Building: `mvn compile assembly:single`. Builds available at the **releases** section.
 
 Usage: `pdfmerger file1.pdf file2.pdf ... out.pdf`.
 
