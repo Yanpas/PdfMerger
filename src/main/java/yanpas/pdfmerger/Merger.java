@@ -10,7 +10,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 
-class Merger implements AutoCloseable {
+final class Merger implements AutoCloseable {
 	private Deque<PDDocument> inDocuments = new ArrayDeque<>();
 	private int outPagesN = 0;
 	private PDDocumentOutline outOutline = new PDDocumentOutline();
@@ -20,7 +20,10 @@ class Merger implements AutoCloseable {
 			throws IOException {
 		for (PDOutlineItem item : itemCollection) {
 			PDPage destPage = null;
-			destPage = item.findDestinationPage(inDoc);
+			try {
+				destPage = item.findDestinationPage(inDoc);
+			} catch (IOException e) {
+			}
 			PDOutlineItem outItem = new PDOutlineItem();
 			if (destPage != null) {
 				PDPage itemDestPage = outDocument.getPages().get(inDoc.getPages().indexOf(destPage) + outPagesN);
