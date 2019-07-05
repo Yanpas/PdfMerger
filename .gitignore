@@ -2,4 +2,5 @@
 .project
 .classpath
 .vscode
+.idea
 target
