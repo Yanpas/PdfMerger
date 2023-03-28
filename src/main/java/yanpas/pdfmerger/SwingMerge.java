@@ -3,8 +3,6 @@ package yanpas.pdfmerger;
 import javax.swing.*;
 
 import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
 import java.util.List;
 import java.awt.Dimension;
 import java.awt.FileDialog;
@@ -12,9 +10,7 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
-@SuppressWarnings("serial")
 class SwingMerge extends JFrame {
 	private class Worker extends SwingWorker<Void, String> {
 		public static final String MERGING = "Merging", SAVING = "Saving";
@@ -30,18 +26,23 @@ class SwingMerge extends JFrame {
 
 		@Override
 		public Void doInBackground() {
+			String documentProcessed = null;
 			try (Merger m = new Merger()) {
 				publish(MERGING);
 				double i = 0;
 				for (File fl : fileList) {
+					documentProcessed = fl.getName();
 					m.addDocument(fl);
 					i++;
 					setProgress((int) (100 * i / (double) fileList.length));
 				}
 				publish(SAVING);
+				documentProcessed = outFile;
 				m.save(outFile);
-			} catch (IOException e) {
-				result = e.getLocalizedMessage();
+			} catch (Exception e) {
+				System.err.printf("Merging failed on %s: %s\n", documentProcessed, e);
+				e.printStackTrace(System.err);
+				result = String.format("Error during processing of %s: %s", documentProcessed, e.getLocalizedMessage());
 				return null;
 			}
 			successful = true;
